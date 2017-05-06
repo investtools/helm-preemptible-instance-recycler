@@ -1,0 +1,11 @@
+# Default values for preemptible-instance-recycler.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+gke:
+  key_json:  <base64-encoded JSON data>
+  project: investtoolscrm
+  region: us-central1
+
+recycler:
+  run_hours: 3,4

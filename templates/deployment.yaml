@@ -1,0 +1,42 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: {{template "fullname" .}}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        helm: preemptible-instance-recycler
+    spec:
+      containers:
+        - name: cron
+          image: blacklabelops/jobber:cloud
+          env:
+            - name: GCLOUD_ACCOUNT
+              value: {{ .Values.gke.key_json }}
+            - name: CLOUDSDK_CORE_PROJECT
+              value: {{ .Values.gke.project }}
+            - name: CLOUDSDK_COMPUTE_REGION
+              value: {{ .Values.gke.region }}
+            - name: JOB_NAME1
+              value: recycle
+            - name: JOB_TIME1
+              value: 0 0 {{ .Values.recycler.run_hours }} * * *
+            - name: JOB_COMMAND1
+              value: >
+                |
+                    gcloud compute instances list \
+                      --limit=1 \
+                      --format="table[no-heading](name,zone)" \
+                      --filter="scheduling.preemptible=true AND metadata.cluster-name=cluster-1" \
+                      --sort-by=creationTimestamp \
+                      | awk '{ system("gcloud compute instances delete -q  --zone="$2" "$1) }'
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: cloud.google.com/gke-preemptible
+                  operator: DoesNotExist
+
